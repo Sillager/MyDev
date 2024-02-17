@@ -22,11 +22,11 @@ services:
     environment:
       TZ: "$TZ"
     restart: always
+    extra_hosts:
+      - "php-cli:10.0.0.11"
     networks:
-      - default
-      # 可以把-default 改成下列配置，以固定容器IP
-      #default:
-      #  ipv4_address: 10.0.0.10
+      net-default:
+        ipv4_address: 10.0.0.10
 
   php:
     build:
@@ -40,8 +40,9 @@ services:
     container_name: php
     expose:
       - 9501
+      - 8095
     extra_hosts:
-      - "www.site1.com:172.17.0.1"
+      - "nginx-cli:10.0.0.10"
     volumes:
       - ${SOURCE_DIR}:/www/:rw
       - ${PHP_PHP_CONF_FILE}:/usr/local/etc/php/php.ini:ro
@@ -52,7 +53,8 @@ services:
     cap_add:
       - SYS_PTRACE
     networks:
-      - default
+      net-default:
+        ipv4_address: 10.0.0.11
 
 #  php80:
 #    build:
@@ -122,8 +124,36 @@ services:
 #    networks:
 #      - default
 
+#  postgres:
+#    image: postgres:${PGSQL_VERSION}
+#    container_name: postgres
+#    ports:
+#      - "${PGSQL_HOST_PORT}:5432"
+#    volumes:
+#      - ${DATA_DIR}/postgres:/var/lib/postgresql/data/:rw
+#    restart: always
+#    networks:
+#      - net-default
+#    environment:
+#      POSTGRES_PASSWORD: "${PGSQL_ROOT_PASSWORD}"
+#      TZ: "$TZ"
+
+#  postgis:
+#    image: mdillon/postgis:${POSTGIS_VERSION}
+#    container_name: postgis
+#    ports:
+#      - "${POSTGIS_HOST_PORT}:5432"
+#    volumes:
+#      - ${DATA_DIR}/postgis:/var/lib/postgresql/data/:rw
+#    restart: always
+#    networks:
+#      - net-default
+#    environment:
+#      POSTGRES_PASSWORD: "${POSTGIS_ROOT_PASSWORD}"
+#      TZ: "$TZ"
+
   mysql:
-    image: mysql:${MYSQL_VERSION}
+    image: mysql/mysql-server:${MYSQL_VERSION}
     container_name: mysql
     ports:
       - "${MYSQL_HOST_PORT}:3306"
@@ -134,7 +164,7 @@ services:
 
     restart: always
     networks:
-      - default
+      - net-default
     environment:
       MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
       MYSQL_ROOT_HOST: "${MYSQL_ROOT_HOST}"
@@ -174,22 +204,22 @@ services:
 #    environment:
 #      TZ: "$TZ"
 #    networks:
-#      - default
+#      - net-default
 
-#  redis:
-#    image: redis:${REDIS_VERSION}
-#    container_name: redis
-#    ports:
-#      - "${REDIS_HOST_PORT}:6379"
-#    volumes:
-#      - ${REDIS_CONF_FILE}:/etc/redis.conf:ro
-#      - ${DATA_DIR}/redis:/data/:rw
-#    restart: always
-#    entrypoint: ["redis-server", "/etc/redis.conf"]
-#    environment:
-#      TZ: "$TZ"
-#    networks:
-#      - default
+  redis:
+    image: redis:${REDIS_VERSION}
+    container_name: redis
+    ports:
+      - "${REDIS_HOST_PORT}:6379"
+    volumes:
+      - ${REDIS_CONF_FILE}:/etc/redis.conf:ro
+      - ${DATA_DIR}/redis:/data/:rw
+    restart: always
+    entrypoint: ["redis-server", "/etc/redis.conf"]
+    environment:
+      TZ: "$TZ"
+    networks:
+      - default
 
 #  memcached:
 #    image: memcached:${MEMCACHED_VERSION}
@@ -322,6 +352,52 @@ services:
 #      - "${LOGSTASH_HOST_PORT_C}:9600"
 #      - "${LOGSTASH_HOST_PORT_S}:5044"
 
+#  tomcat:
+#    build:
+#      context: ./services/tomcat
+#      args:
+#        TOMCAT_VERSION: ${TOMCAT_VERSION}
+#    container_name: tomcat
+#    hostname: tomcat
+#    volumes:
+#      - ${SOURCE_DIR}/tomcat:/usr/local/tomcat/webapps:rw
+#    expose:
+#      - "8080"
+#    ports:
+#      - "${TOMCAT_PORT}:8080"
+#    environment:
+#      TZ: "$TZ"
+#    restart: always
+#    networks:
+#      - net-default
+
+  python:
+    build:
+      context: ./services/python
+      args:
+        PYTHON_VERSION: ${PYTHON_VERSION}
+    command: python3 /code/HelloWorld/manage.py runserver 0.0.0.0:8000
+#    command:
+#      - /bin/sh
+#      - -c
+#      - |
+#        django-admin startproject HelloWorld
+#        python3 /code/HelloWorld/manage.py runserver 0.0.0.0:8000
+    container_name: python
+    hostname: python
+    volumes:
+      - ${SOURCE_DIR}/python:/code:rw
+    expose:
+      - "8000"
+    ports:
+      - "${PYTHON_PORT}:8000"
+    environment:
+      TZ: "$TZ"
+    privileged: true
+    restart: always
+    networks:
+      - net-default
+
 #  node:
 #    image: node:${NODE_VERSION}
 #    environment:
@@ -360,7 +436,27 @@ services:
 #    cap_add:
 #      - SYS_PTRACE
 #    networks:
-#      - default
+#      - net-default
+
+  golang:
+    build:
+      context: ./services/golang
+      args:
+        GOLANG_VERSION: ${GOLANG_VERSION}
+    command: go run mainTest.go
+    container_name: golang
+    hostname: golang
+    volumes:
+      - ${SOURCE_DIR}/golang:/app:rw
+    ports:
+      - "${GOLANG_PORT}:9110"
+      - "${GOLANG_RUN_PORT}:8080"
+    environment:
+      - TZ=$TZ
+    privileged: true
+    restart: always
+    networks:
+      - net-default
 
 networks:
   default:
@@ -368,5 +464,5 @@ networks:
     ipam:
       driver: default
       # 解除下面的注释可以设置网段，用于nginx等容器固定容器IP
-      #config:
-      #  - subnet: 10.0.0.0/24
+      config:
+       - subnet: 10.0.0.0/24

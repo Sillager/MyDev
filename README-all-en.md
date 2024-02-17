@@ -1,3 +1,5 @@
+> ⭐ Personal use, Added Tomcat、Python、postgres、postgis、golang on the original basis。
+
 DNMP (Docker + Nginx/Openresty + MySQL5, 8 + PHP5, 7,8 + Redis + ElasticSearch + MongoDB + RabbitMQ) is a full-featured model**LNMP one-click installer with Support for Arm CPUs**。
 
 > It is best to read it in advance before use[directory](#目录), in order to get started quickly, and problems can be eliminated in time.
